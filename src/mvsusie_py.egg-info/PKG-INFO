@@ -1,0 +1,47 @@
+Metadata-Version: 2.4
+Name: mvsusie-py
+Version: 0.2.0
+Summary: Python MVP port of core mvsusieR APIs
+Author: mvsusie-py contributors
+License: MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.23
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+
+# mvsusie-py
+
+Minimal Python MVP port of core `mvsusieR` APIs.
+
+## Quick start
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -e .
+python -m pip install pytest
+```
+
+## Run tests
+
+```bash
+source .venv/bin/activate
+PYTHONPATH=src python -m pytest -q
+```
+
+## API docs
+
+See full API shapes/signatures/examples in [API.md](./API.md).
+
+## Parity smoke check
+
+```bash
+source .venv/bin/activate
+PYTHONPATH=src python scripts/parity_smoke.py
+```
+
+Expected behavior in the smoke check:
+- dense / suff-stat / rss usually agree on top PIP
+- dense vs suff-stat coefficient correlation is near 1.0
