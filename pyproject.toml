@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mvsusie-py"
 version = "0.3.0"
-description = "Python MVP port of core mvsusieR APIs"
+description = "Pure Python/NumPy implementation of mvsusieR: joint multivariate fine-mapping with mash covariance learning"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "mvsusie-py contributors" }]
