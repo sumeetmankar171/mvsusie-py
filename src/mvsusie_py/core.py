@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import numpy as np
 
 
@@ -24,6 +24,30 @@ class MultiSusieResult:
     fits: list[SusieResult]
     intercept: np.ndarray
     prior_variance: float
+
+
+@dataclass
+class JointMultiSusieResult:
+    """Result from full joint multivariate SuSiE with shared residual covariance."""
+    alpha: np.ndarray          # (L, p) — shared across outcomes
+    mu: np.ndarray             # (L, p, r) — posterior means per outcome
+    mu2: np.ndarray            # (L, p, r) — posterior second moments
+    pip: np.ndarray            # (p,) — marginal PIPs (shared)
+    intercept: np.ndarray      # (r,)
+    residual_variance: np.ndarray  # (r, r) covariance matrix Sigma
+    prior_variance: float
+    converged: bool
+    n_iter: int
+    X_mean: np.ndarray         # (p,)
+    Y_mean: np.ndarray         # (r,)
+
+
+@dataclass
+class MashCovariance:
+    """Learned mash-style covariance mixture (pure Python/numpy, no R)."""
+    weights: np.ndarray        # (K,) mixture weights
+    components: np.ndarray     # (K, r, r) covariance matrices
+    loglik_trace: list[float] = field(default_factory=list)
 
 
 @dataclass
@@ -258,6 +282,304 @@ def fit_susie_multivariate_independent(
     return MultiSusieResult(fits=fits, intercept=intercept, prior_variance=prior_variance)
 
 
+def fit_susie_multivariate_joint(
+    X: np.ndarray,
+    Y: np.ndarray,
+    L: int = 10,
+    prior_variance: float = 1.0,
+    residual_variance: np.ndarray | None = None,
+    estimate_residual_variance: bool = True,
+    max_iter: int = 200,
+    tol: float = 1e-4,
+) -> JointMultiSusieResult:
+    """Full joint multivariate SuSiE with a shared (r x r) residual covariance.
+
+    Each single-effect update uses the inverse of the joint covariance Sigma so
+    that cross-trait signals are modelled together rather than independently.
+
+    Parameters
+    ----------
+    X : (n, p) genotype / predictor matrix
+    Y : (n, r) multi-trait response matrix
+    L : number of single effects
+    prior_variance : scalar prior variance V for each effect
+    residual_variance : (r, r) initial Sigma; defaults to diag(var(Y))
+    estimate_residual_variance : update Sigma each iteration
+    max_iter, tol : convergence controls
+
+    Returns
+    -------
+    JointMultiSusieResult
+    """
+    X = np.asarray(X, dtype=float)
+    Y = np.asarray(Y, dtype=float)
+
+    if X.ndim != 2:
+        raise ValueError("X must be 2D")
+    if Y.ndim != 2:
+        raise ValueError("Y must be 2D for joint multivariate fitting")
+    n, p = X.shape
+    r = Y.shape[1]
+    if Y.shape[0] != n:
+        raise ValueError("Y row count must match X rows")
+    if L <= 0:
+        raise ValueError("L must be positive")
+    if prior_variance <= 0:
+        raise ValueError("prior_variance must be positive")
+
+    # Centre
+    X_mean = X.mean(axis=0)
+    Y_mean = Y.mean(axis=0)
+    Xc = X - X_mean
+    Yc = Y - Y_mean
+
+    d = np.sum(Xc * Xc, axis=0)          # (p,) column squared-norms
+    if np.any(d == 0):
+        raise ValueError("X contains zero-variance columns")
+
+    # Initialise Sigma
+    if residual_variance is None:
+        Sigma = np.diag(np.var(Yc, axis=0))
+    else:
+        Sigma = np.asarray(residual_variance, dtype=float)
+        if Sigma.shape != (r, r):
+            raise ValueError("residual_variance must be (r, r)")
+    Sigma = Sigma.copy()
+
+    # Initialise parameters  alpha:(L,p)  mu:(L,p,r)  mu2:(L,p,r)
+    alpha = np.full((L, p), 1.0 / p)
+    mu    = np.zeros((L, p, r))
+    mu2   = np.zeros((L, p, r))
+
+    # B_hat (p, r): posterior expected coefficients
+    B = np.einsum('lp,lpr->pr', alpha, mu)   # (p, r)
+    R = Yc - Xc @ B                           # (n, r) residuals
+
+    converged = False
+    prev_B = B.copy()
+
+    for it in range(1, max_iter + 1):
+        try:
+            Sigma_inv = np.linalg.inv(Sigma)  # (r, r)
+        except np.linalg.LinAlgError:
+            Sigma_inv = np.linalg.pinv(Sigma)
+
+        for l in range(L):
+            # Restore residual for this effect
+            B_l_old = mu[l] * alpha[l, :, np.newaxis]   # (p, r)
+            R_l = R + Xc @ B_l_old                       # (n, r)
+
+            # Sufficient stats for each SNP: bhat_j = (x_j' R_l) / d_j  shape (p, r)
+            bhat = (Xc.T @ R_l) / d[:, np.newaxis]      # (p, r)
+
+            # Multivariate Bayes factor per SNP using shared Sigma
+            # log BF_j = 0.5 * [ log|I + V * d_j * Sigma_inv|^{-1}
+            #                   + bhat_j' (V^{-1}/d_j * I + Sigma_inv)^{-1} Sigma_inv^2 bhat_j ]
+            # Simplified scalar-prior form (V scalar):
+            logbf = np.zeros(p)
+            post_mean = np.zeros((p, r))
+            post_var  = np.zeros((p, r))
+
+            for j in range(p):
+                dj = d[j]
+                # Posterior precision: (1/V + dj * Sigma_inv)^{-1}
+                prec_prior = (1.0 / prior_variance) * np.eye(r)
+                prec_data  = dj * Sigma_inv
+                prec_post  = prec_prior + prec_data       # (r, r)
+                try:
+                    Sigma_post = np.linalg.inv(prec_post)
+                except np.linalg.LinAlgError:
+                    Sigma_post = np.linalg.pinv(prec_post)
+
+                mu_post = Sigma_post @ (Sigma_inv @ (dj * bhat[j]))  # (r,)
+
+                # log |Sigma_post| - log|prior_cov|
+                sign_post, ld_post = np.linalg.slogdet(Sigma_post)
+                ld_prior = r * np.log(prior_variance)
+                log_det_ratio = ld_post - ld_prior   # log|Sigma_post/Sigma_prior|
+
+                # Quadratic term: mu_post' prec_post mu_post  (positive definite)
+                quad = float(mu_post @ prec_post @ mu_post)
+
+                logbf[j] = 0.5 * (log_det_ratio + quad)
+                post_mean[j] = mu_post
+                post_var[j]  = np.diag(Sigma_post)
+
+            alpha_l = _softmax(logbf)
+
+            alpha[l] = alpha_l
+            mu[l]    = post_mean                               # (p, r)
+            mu2[l]   = post_var + post_mean ** 2              # (p, r)
+
+            B_l_new = mu[l] * alpha_l[:, np.newaxis]         # (p, r)
+            R = R_l - Xc @ B_l_new
+
+        B = np.einsum('lp,lpr->pr', alpha, mu)
+        dB = np.linalg.norm(B - prev_B)
+
+        if estimate_residual_variance:
+            E = Yc - Xc @ B                           # (n, r)
+            Sigma = (E.T @ E) / n
+            # Regularise: ridge toward diagonal to avoid singularity
+            Sigma += 1e-6 * np.eye(r)
+
+        if dB < tol:
+            converged = True
+            break
+        prev_B = B.copy()
+
+    pip = 1.0 - np.prod(1.0 - alpha, axis=0)   # (p,)
+    intercept = Y_mean - X_mean @ B             # (r,)
+
+    return JointMultiSusieResult(
+        alpha=alpha,
+        mu=mu,
+        mu2=mu2,
+        pip=pip,
+        intercept=intercept,
+        residual_variance=Sigma,
+        prior_variance=prior_variance,
+        converged=converged,
+        n_iter=it,
+        X_mean=X_mean,
+        Y_mean=Y_mean,
+    )
+
+
+def learn_mash_covariances(
+    B_hat: np.ndarray,
+    S_hat: np.ndarray | None = None,
+    n_data_driven: int = 3,
+    max_iter: int = 500,
+    tol: float = 1e-6,
+    min_weight: float = 1e-8,
+) -> MashCovariance:
+    """Learn mash-style covariance mixture via EM (pure numpy, no R).
+
+    Fits a mixture  Y ~ sum_k pi_k * N(0, U_k)  where U_k are (r x r)
+    covariance components.  Components include:
+
+    * Canonical: identity I, rank-1 per condition (e_j e_j')
+    * Data-driven: top `n_data_driven` PCs of B_hat (mash default strategy)
+
+    Parameters
+    ----------
+    B_hat : (p, r) matrix of effect estimates (e.g. from coef(joint_fit))
+    S_hat : (p, r) standard errors; if given, effects are scaled before PCA
+    n_data_driven : number of data-driven covariance components from PCA
+    max_iter, tol : EM convergence controls
+    min_weight : floor for mixture weights (numerical stability)
+
+    Returns
+    -------
+    MashCovariance with .weights (K,), .components (K, r, r)
+    """
+    B = np.asarray(B_hat, dtype=float)
+    p, r = B.shape
+    if p < 2 or r < 2:
+        raise ValueError("B_hat must be at least (2, 2)")
+
+    # ---- Build canonical components ----------------------------------------
+    components = []
+
+    # 1. Null (zero matrix — implicit in mash, here kept for completeness)
+    components.append(np.zeros((r, r)))
+
+    # 2. Identity (all traits equally affected)
+    components.append(np.eye(r))
+
+    # 3. Rank-1 per condition  (e_j e_j')
+    for j in range(r):
+        U = np.zeros((r, r))
+        U[j, j] = 1.0
+        components.append(U)
+
+    # ---- Data-driven components via PCA on B_hat ---------------------------
+    B_scaled = B.copy()
+    if S_hat is not None:
+        S = np.asarray(S_hat, dtype=float)
+        S = np.where(S > 0, S, 1.0)
+        B_scaled = B / S
+
+    # Row-centre before SVD
+    B_c = B_scaled - B_scaled.mean(axis=0)
+    try:
+        _, sv, Vt = np.linalg.svd(B_c, full_matrices=False)
+        n_dd = min(n_data_driven, Vt.shape[0])
+        for k in range(n_dd):
+            v = Vt[k]                    # (r,) top PC direction
+            weight = sv[k] ** 2 / p
+            U_dd = weight * np.outer(v, v)
+            components.append(U_dd)
+    except np.linalg.LinAlgError:
+        pass  # skip data-driven if SVD fails
+
+    components = np.stack(components, axis=0)   # (K, r, r)
+    K = components.shape[0]
+
+    # ---- EM algorithm -------------------------------------------------------
+    # We treat each row of B_hat as an observation ~ N(0, U_k)
+    # E-step: responsibilities  r_{ik} = pi_k * p(b_i | U_k) / sum_k
+    # M-step: pi_k = mean(r_{ik})
+
+    pi = np.full(K, 1.0 / K)
+    loglik_trace: list[float] = []
+
+    # Precompute log-likelihoods  log p(b_i | U_k)  shape (p, K)
+    def _log_mvn(B: np.ndarray, U: np.ndarray) -> np.ndarray:
+        """log N(b; 0, U) for each row b of B.  Returns (p,) vector."""
+        reg = U + 1e-8 * np.eye(r)
+        try:
+            L_chol = np.linalg.cholesky(reg)
+        except np.linalg.LinAlgError:
+            # Fall back to pseudo-inverse for degenerate components
+            eigvals, eigvecs = np.linalg.eigh(reg)
+            eigvals = np.maximum(eigvals, 1e-10)
+            inv_U = eigvecs @ np.diag(1.0 / eigvals) @ eigvecs.T
+            log_det = np.sum(np.log(eigvals))
+            quad = np.einsum('pi,ij,pj->p', B, inv_U, B)
+            return -0.5 * (r * np.log(2 * np.pi) + log_det + quad)
+
+        inv_L = np.linalg.inv(L_chol)
+        log_det = 2.0 * np.sum(np.log(np.diag(L_chol)))
+        # Mahalanobis: ||inv_L @ b||^2 for each row b
+        z = B @ inv_L.T                           # (p, r)
+        quad = np.sum(z ** 2, axis=1)             # (p,)
+        return -0.5 * (r * np.log(2 * np.pi) + log_det + quad)
+
+    log_liks = np.column_stack([_log_mvn(B, components[k]) for k in range(K)])  # (p, K)
+
+    for em_it in range(max_iter):
+        # E-step: log responsibilities
+        log_resp = log_liks + np.log(pi + 1e-300)    # (p, K)
+        log_norm = log_resp - log_resp.max(axis=1, keepdims=True)
+        resp = np.exp(log_norm)
+        resp /= resp.sum(axis=1, keepdims=True)      # (p, K)
+
+        # Log-likelihood
+        ll = float(np.sum(
+            log_resp.max(axis=1) + np.log(np.exp(log_norm).sum(axis=1))
+        ))
+        loglik_trace.append(ll)
+
+        # M-step: update weights
+        pi_new = resp.mean(axis=0)
+        pi_new = np.maximum(pi_new, min_weight)
+        pi_new /= pi_new.sum()
+
+        delta = np.max(np.abs(pi_new - pi))
+        pi = pi_new
+
+        if em_it > 0 and delta < tol:
+            break
+
+    return MashCovariance(
+        weights=pi,
+        components=components,
+        loglik_trace=loglik_trace,
+    )
+
+
 def mvsusie(
     X: np.ndarray,
     y: np.ndarray,
@@ -268,7 +590,8 @@ def mvsusie(
     estimate_residual_variance: bool = True,
     max_iter: int = 200,
     tol: float = 1e-4,
-) -> SusieResult | MultiSusieResult:
+    joint: bool = False,
+) -> SusieResult | MultiSusieResult | JointMultiSusieResult:
     eff_prior_variance = _resolve_prior_variance(prior_variance, mixture_prior)
     y_arr = np.asarray(y)
 
@@ -285,6 +608,20 @@ def mvsusie(
         )
 
     if y_arr.ndim == 2:
+        if joint:
+            rv = None if residual_variance is None else np.asarray(residual_variance, dtype=float)
+            if rv is not None and rv.ndim == 0:
+                rv = float(rv) * np.eye(y_arr.shape[1])
+            return fit_susie_multivariate_joint(
+                X=X,
+                Y=y_arr,
+                L=L,
+                prior_variance=eff_prior_variance,
+                residual_variance=rv,
+                estimate_residual_variance=estimate_residual_variance,
+                max_iter=max_iter,
+                tol=tol,
+            )
         return fit_susie_multivariate_independent(
             X=X,
             Y=y_arr,
