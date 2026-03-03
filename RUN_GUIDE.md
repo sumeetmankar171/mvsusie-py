@@ -24,7 +24,7 @@ This guide explains exactly how to run `mvsusie-py`, what each command does, and
 From the project root:
 
 ```bash
-cd /Users/smankar2/Downloads/mvsusie-py
+cd ~/mvsusie-py
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
