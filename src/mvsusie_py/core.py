@@ -40,6 +40,7 @@ class JointMultiSusieResult:
     n_iter: int
     X_mean: np.ndarray         # (p,)
     Y_mean: np.ndarray         # (r,)
+    prior_variance_trace: list[float] = field(default_factory=list)  # EM V trace
 
 
 @dataclass
@@ -282,6 +283,214 @@ def fit_susie_multivariate_independent(
     return MultiSusieResult(fits=fits, intercept=intercept, prior_variance=prior_variance)
 
 
+
+# ---------------------------------------------------------------------------
+# Helper: EM update for scalar prior variance V
+# ---------------------------------------------------------------------------
+
+def em_update_prior_variance(
+    alpha: np.ndarray,
+    mu: np.ndarray,
+    mu2: np.ndarray,
+) -> float:
+    """One EM step to update scalar prior variance V.
+
+    For each single-effect l, the marginal likelihood w.r.t. V is maximised
+    analytically via the formula:
+
+        V_new = sum_l sum_j alpha[l,j] * mu2_marginal[l,j]
+
+    where mu2_marginal[l,j] is the mean of the diagonal of the posterior
+    second-moment matrix for SNP j, effect l. The result is averaged over
+    L effects and r outcomes.
+
+    Parameters
+    ----------
+    alpha : (L, p)
+    mu    : (L, p) or (L, p, r)
+    mu2   : (L, p) or (L, p, r)
+
+    Returns
+    -------
+    V_new : float  (positive)
+    """
+    alpha = np.asarray(alpha, dtype=float)
+    mu    = np.asarray(mu,    dtype=float)
+    mu2   = np.asarray(mu2,   dtype=float)
+
+    if mu.ndim == 3:
+        # Multivariate: average over r outcomes
+        mu2_marginal = mu2.mean(axis=2)   # (L, p)
+    else:
+        mu2_marginal = mu2
+
+    # E[b^2] per effect = sum_j alpha_lj * mu2_lj
+    # V_new = mean over L of E[b^2]
+    V_new = float(np.mean(np.sum(alpha * mu2_marginal, axis=1)))
+    return max(V_new, 1e-10)
+
+
+# ---------------------------------------------------------------------------
+# Helper: mash posterior reweighting for a joint fit
+# ---------------------------------------------------------------------------
+
+def mash_reweight_joint(
+    fit: "JointMultiSusieResult",
+    mc: "MashCovariance",
+    X: np.ndarray,
+    Y: np.ndarray,
+) -> "JointMultiSusieResult":
+    """Apply learned mash covariance mixture as a structured prior in a joint fit.
+
+    After `learn_mash_covariances` produces mixture weights pi_k and covariance
+    components U_k, this function re-runs one pass of the IBSS-M update replacing
+    the scalar prior V*I with the mixture prior  sum_k pi_k * s_k * U_k, where
+    s_k is a grid of scaling factors.  The resulting posterior is the
+    mixture-weighted average across components.
+
+    This implements the key step missing from the original mvsusie-py: feeding
+    learned cross-trait covariance structure back into the fine-mapping.
+
+    Parameters
+    ----------
+    fit : JointMultiSusieResult  (from fit_susie_multivariate_joint)
+    mc  : MashCovariance         (from learn_mash_covariances)
+    X   : (n, p) original genotype matrix
+    Y   : (n, r) original trait matrix
+
+    Returns
+    -------
+    Updated JointMultiSusieResult with mash-reweighted posteriors
+    """
+    X = np.asarray(X, dtype=float)
+    Y = np.asarray(Y, dtype=float)
+    n, p = X.shape
+    r = Y.shape[1]
+    L = fit.alpha.shape[0]
+
+    Xc = X - fit.X_mean
+    Yc = Y - fit.Y_mean
+
+    # Current residual covariance from the joint fit
+    Sigma = fit.residual_variance.copy()
+    try:
+        Sigma_inv = np.linalg.inv(Sigma)
+    except np.linalg.LinAlgError:
+        Sigma_inv = np.linalg.pinv(Sigma)
+
+    alpha = fit.alpha.copy()
+    mu    = fit.mu.copy()
+    mu2   = fit.mu2.copy()
+
+    B = np.einsum('lp,lpr->pr', alpha, mu)
+    R = Yc - Xc @ B
+
+    # Grid of scales (mash uses a grid of sigma^2 values)
+    scales = np.array([0.25, 0.5, 1.0, 2.0, 4.0])
+    K = mc.components.shape[0]
+    weights = mc.weights          # (K,)
+    components = mc.components    # (K, r, r)
+
+    # Build full prior mixture: K components x S scales = K*S prior matrices
+    prior_covs = []
+    prior_ws   = []
+    for k in range(K):
+        for s in scales:
+            U = s * components[k]
+            # Skip degenerate (zero) components
+            if np.max(np.abs(U)) < 1e-12:
+                continue
+            prior_covs.append(U)
+            prior_ws.append(weights[k] / len(scales))
+
+    prior_covs = np.array(prior_covs)   # (M, r, r)
+    prior_ws   = np.array(prior_ws, dtype=float)
+    prior_ws  /= prior_ws.sum()
+    M = prior_covs.shape[0]
+
+    for l in range(L):
+        B_l_old = mu[l] * alpha[l, :, np.newaxis]
+        R_l = R + Xc @ B_l_old
+        bhat = (Xc.T @ R_l) / np.sum(Xc * Xc, axis=0)[:, np.newaxis]  # (p, r)
+
+        logbf    = np.zeros(p)
+        post_mean = np.zeros((p, r))
+        post_var  = np.zeros((p, r))
+
+        d = np.sum(Xc * Xc, axis=0)
+
+        for j in range(p):
+            dj = d[j]
+            bj = bhat[j]   # (r,)
+
+            # For each prior component, compute posterior and log BF
+            comp_logbf   = np.zeros(M)
+            comp_mu      = np.zeros((M, r))
+            comp_sigma   = np.zeros((M, r))
+
+            for m, U_m in enumerate(prior_covs):
+                prec_prior = np.linalg.pinv(U_m + 1e-10 * np.eye(r))
+                prec_post  = prec_prior + dj * Sigma_inv
+                try:
+                    Sp = np.linalg.inv(prec_post)
+                except np.linalg.LinAlgError:
+                    Sp = np.linalg.pinv(prec_post)
+
+                mu_p = Sp @ (Sigma_inv @ (dj * bj))
+
+                _, ld_post  = np.linalg.slogdet(Sp)
+                _, ld_prior = np.linalg.slogdet(U_m + 1e-10 * np.eye(r))
+                quad = float(mu_p @ prec_post @ mu_p)
+                comp_logbf[m]  = 0.5 * (ld_post - ld_prior + quad)
+                comp_mu[m]     = mu_p
+                comp_sigma[m]  = np.diag(Sp)
+
+            # Mixture posterior: weight components by prior_ws * exp(logBF)
+            log_w = np.log(prior_ws + 1e-300) + comp_logbf
+            log_w -= log_w.max()
+            w = np.exp(log_w)
+            w /= w.sum()
+
+            # Mixture log BF (marginalise over components) — log-sum-exp trick
+            log_ws_bf = np.log(prior_ws + 1e-300) + comp_logbf  # (M,)
+            lmax = log_ws_bf.max()
+            logbf[j] = lmax + np.log(np.sum(np.exp(log_ws_bf - lmax)))
+
+            # Mixture posterior mean and variance
+            post_mean[j] = w @ comp_mu         # weighted mean
+            # Law of total variance: Var = E[Var] + Var[E]
+            mean_var  = w @ comp_sigma
+            var_mean  = w @ (comp_mu ** 2) - post_mean[j] ** 2
+            post_var[j] = mean_var + var_mean
+
+        alpha_l = _softmax(logbf)
+        alpha[l] = alpha_l
+        mu[l]    = post_mean
+        mu2[l]   = post_var + post_mean ** 2
+
+        B_l_new = mu[l] * alpha_l[:, np.newaxis]
+        R = R_l - Xc @ B_l_new
+
+    B   = np.einsum('lp,lpr->pr', alpha, mu)
+    pip = 1.0 - np.prod(1.0 - alpha, axis=0)
+    intercept = fit.Y_mean - fit.X_mean @ B
+
+    return JointMultiSusieResult(
+        alpha=alpha,
+        mu=mu,
+        mu2=mu2,
+        pip=pip,
+        intercept=intercept,
+        residual_variance=Sigma,
+        prior_variance=fit.prior_variance,
+        converged=fit.converged,
+        n_iter=fit.n_iter,
+        X_mean=fit.X_mean,
+        Y_mean=fit.Y_mean,
+        prior_variance_trace=fit.prior_variance_trace,
+    )
+
+
 def fit_susie_multivariate_joint(
     X: np.ndarray,
     Y: np.ndarray,
@@ -289,6 +498,7 @@ def fit_susie_multivariate_joint(
     prior_variance: float = 1.0,
     residual_variance: np.ndarray | None = None,
     estimate_residual_variance: bool = True,
+    estimate_prior_variance: bool = False,
     max_iter: int = 200,
     tol: float = 1e-4,
 ) -> JointMultiSusieResult:
@@ -296,20 +506,22 @@ def fit_susie_multivariate_joint(
 
     Each single-effect update uses the inverse of the joint covariance Sigma so
     that cross-trait signals are modelled together rather than independently.
+    Optionally performs EM updates of the scalar prior variance V.
 
     Parameters
     ----------
     X : (n, p) genotype / predictor matrix
     Y : (n, r) multi-trait response matrix
     L : number of single effects
-    prior_variance : scalar prior variance V for each effect
+    prior_variance : initial scalar prior variance V for each effect
     residual_variance : (r, r) initial Sigma; defaults to diag(var(Y))
-    estimate_residual_variance : update Sigma each iteration
+    estimate_residual_variance : update Sigma (r x r) each IBSS iteration
+    estimate_prior_variance : update scalar V via EM each IBSS iteration
     max_iter, tol : convergence controls
 
     Returns
     -------
-    JointMultiSusieResult
+    JointMultiSusieResult  (.prior_variance_trace records V at each iteration)
     """
     X = np.asarray(X, dtype=float)
     Y = np.asarray(Y, dtype=float)
@@ -357,6 +569,7 @@ def fit_susie_multivariate_joint(
 
     converged = False
     prev_B = B.copy()
+    pv_trace: list[float] = []
 
     for it in range(1, max_iter + 1):
         try:
@@ -423,6 +636,10 @@ def fit_susie_multivariate_joint(
             # Regularise: ridge toward diagonal to avoid singularity
             Sigma += 1e-6 * np.eye(r)
 
+        if estimate_prior_variance:
+            prior_variance = em_update_prior_variance(alpha, mu, mu2)
+            pv_trace.append(prior_variance)
+
         if dB < tol:
             converged = True
             break
@@ -443,6 +660,7 @@ def fit_susie_multivariate_joint(
         n_iter=it,
         X_mean=X_mean,
         Y_mean=Y_mean,
+        prior_variance_trace=pv_trace,
     )
 
 
