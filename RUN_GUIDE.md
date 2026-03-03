@@ -1,4 +1,4 @@
-# mvsusie-py Run Guide (Detailed)
+# mvsusie-py Run Guide
 
 This guide explains exactly how to run `mvsusie-py`, what each command does, and what each function option means.
 
