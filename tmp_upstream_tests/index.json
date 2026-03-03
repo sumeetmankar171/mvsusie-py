@@ -1,0 +1,178 @@
+[
+  {
+    "name": "helper_testthat.R",
+    "path": "tests/testthat/helper_testthat.R",
+    "sha": "6ebcabe3bdca5ab087b0305ae34e2b35048cfc22",
+    "size": 5836,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/helper_testthat.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/helper_testthat.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/6ebcabe3bdca5ab087b0305ae34e2b35048cfc22",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/helper_testthat.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/helper_testthat.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/6ebcabe3bdca5ab087b0305ae34e2b35048cfc22",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/helper_testthat.R"
+    }
+  },
+  {
+    "name": "test_bayesian_simple_regression.R",
+    "path": "tests/testthat/test_bayesian_simple_regression.R",
+    "sha": "80be7204dcfac8efac3c38a761798a5216b849e6",
+    "size": 1973,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_bayesian_simple_regression.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_bayesian_simple_regression.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/80be7204dcfac8efac3c38a761798a5216b849e6",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/test_bayesian_simple_regression.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_bayesian_simple_regression.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/80be7204dcfac8efac3c38a761798a5216b849e6",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_bayesian_simple_regression.R"
+    }
+  },
+  {
+    "name": "test_convergence_check.R",
+    "path": "tests/testthat/test_convergence_check.R",
+    "sha": "d5e0eb6ecde12d179a94064bc01720e0a4240952",
+    "size": 2427,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_convergence_check.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_convergence_check.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/d5e0eb6ecde12d179a94064bc01720e0a4240952",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/test_convergence_check.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_convergence_check.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/d5e0eb6ecde12d179a94064bc01720e0a4240952",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_convergence_check.R"
+    }
+  },
+  {
+    "name": "test_estimate_residual.R",
+    "path": "tests/testthat/test_estimate_residual.R",
+    "sha": "e858c2518e336cecca874feeb0528c9d118e9db7",
+    "size": 1612,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_estimate_residual.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_estimate_residual.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/e858c2518e336cecca874feeb0528c9d118e9db7",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/test_estimate_residual.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_estimate_residual.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/e858c2518e336cecca874feeb0528c9d118e9db7",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_estimate_residual.R"
+    }
+  },
+  {
+    "name": "test_mash_regression.R",
+    "path": "tests/testthat/test_mash_regression.R",
+    "sha": "257741ff4461491cb602af5e7e415fd5b23d6b16",
+    "size": 7331,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_mash_regression.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_mash_regression.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/257741ff4461491cb602af5e7e415fd5b23d6b16",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/test_mash_regression.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_mash_regression.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/257741ff4461491cb602af5e7e415fd5b23d6b16",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_mash_regression.R"
+    }
+  },
+  {
+    "name": "test_missing_sumstats.R",
+    "path": "tests/testthat/test_missing_sumstats.R",
+    "sha": "2d95b1b99e5a0dee6985c12c80537ca9e5ebb33a",
+    "size": 18141,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_missing_sumstats.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_missing_sumstats.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/2d95b1b99e5a0dee6985c12c80537ca9e5ebb33a",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/test_missing_sumstats.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_missing_sumstats.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/2d95b1b99e5a0dee6985c12c80537ca9e5ebb33a",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_missing_sumstats.R"
+    }
+  },
+  {
+    "name": "test_mvsusie_coef.R",
+    "path": "tests/testthat/test_mvsusie_coef.R",
+    "sha": "5837576d1dd3fbfeb9f990ee9c05a64f8824c387",
+    "size": 2485,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_mvsusie_coef.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_mvsusie_coef.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/5837576d1dd3fbfeb9f990ee9c05a64f8824c387",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/test_mvsusie_coef.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_mvsusie_coef.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/5837576d1dd3fbfeb9f990ee9c05a64f8824c387",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_mvsusie_coef.R"
+    }
+  },
+  {
+    "name": "test_mvsusie_predict.R",
+    "path": "tests/testthat/test_mvsusie_predict.R",
+    "sha": "54121dd0c71523040311490d65f1bef16a55e524",
+    "size": 2509,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_mvsusie_predict.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_mvsusie_predict.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/54121dd0c71523040311490d65f1bef16a55e524",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/test_mvsusie_predict.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_mvsusie_predict.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/54121dd0c71523040311490d65f1bef16a55e524",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_mvsusie_predict.R"
+    }
+  },
+  {
+    "name": "test_single_effect_model.R",
+    "path": "tests/testthat/test_single_effect_model.R",
+    "sha": "e6b348ebc08bfa80d3cf1d06981182caff841ff2",
+    "size": 2754,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_single_effect_model.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_single_effect_model.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/e6b348ebc08bfa80d3cf1d06981182caff841ff2",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/test_single_effect_model.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_single_effect_model.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/e6b348ebc08bfa80d3cf1d06981182caff841ff2",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_single_effect_model.R"
+    }
+  },
+  {
+    "name": "test_suff_sumstats.R",
+    "path": "tests/testthat/test_suff_sumstats.R",
+    "sha": "0dd976b7ce84a10e460487f7a306d92236ba5d42",
+    "size": 9846,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_suff_sumstats.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_suff_sumstats.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/0dd976b7ce84a10e460487f7a306d92236ba5d42",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/test_suff_sumstats.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_suff_sumstats.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/0dd976b7ce84a10e460487f7a306d92236ba5d42",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_suff_sumstats.R"
+    }
+  },
+  {
+    "name": "test_susie_regression.R",
+    "path": "tests/testthat/test_susie_regression.R",
+    "sha": "557eed0606ced9708f5617495f32144bd1bef633",
+    "size": 11301,
+    "url": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_susie_regression.R?ref=master",
+    "html_url": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_susie_regression.R",
+    "git_url": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/557eed0606ced9708f5617495f32144bd1bef633",
+    "download_url": "https://raw.githubusercontent.com/stephenslab/mvsusieR/master/tests/testthat/test_susie_regression.R",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/stephenslab/mvsusieR/contents/tests/testthat/test_susie_regression.R?ref=master",
+      "git": "https://api.github.com/repos/stephenslab/mvsusieR/git/blobs/557eed0606ced9708f5617495f32144bd1bef633",
+      "html": "https://github.com/stephenslab/mvsusieR/blob/master/tests/testthat/test_susie_regression.R"
+    }
+  }
+]
