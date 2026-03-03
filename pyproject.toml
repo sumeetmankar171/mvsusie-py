@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mvsusie-py"
-version = "0.2.0"
+version = "0.3.0"
 description = "Python MVP port of core mvsusieR APIs"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -18,6 +18,9 @@ dependencies = [
 dev = [
   "pytest>=7.0",
 ]
+
+[project.scripts]
+mvsusie = "mvsusie_py.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
