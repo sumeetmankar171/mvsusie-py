@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 - 2026-03-03
+
+- Added full joint multivariate inference (`fit_susie_multivariate_joint`) with shared (r×r) residual covariance Σ updated each IBSS-M iteration.
+- Added mash-style covariance mixture learning (`learn_mash_covariances`) via EM over canonical and data-driven (PCA) components.
+- Added mash posterior reweighting (`mash_reweight_joint`) feeding learned cross-trait covariance back into IBSS as a structured mixture prior.
+- Added EM-based prior variance learning (`em_update_prior_variance`) with `estimate_prior_variance=True` flag in joint fit.
+- Added `JointMultiSusieResult` dataclass with `prior_variance_trace` field.
+- Added `MashCovariance` dataclass.
+- Added CLI (`mvsusie dense / rss / suff-stat`) with `--joint`, `--estimate-prior-variance`, `--mash-reweight` flags.
+- Expanded test suite from 52 to 75 tests covering all new APIs and CLI end-to-end.
+- Added `.gitignore`, GitHub Actions CI (Python 3.9–3.12).
+
 ## 0.2.0 - 2026-03-03
 
 - Added multivariate response support via independent per-outcome fitting.
