@@ -13,7 +13,7 @@
 
 - [ ] Commit release changes
 - [ ] Create annotated tag (example):
-  - `git tag -a v0.2.0 -m "v0.2.0"`
+  - `git tag -a v0.3.0 -m "v0.3.0"`
 - [ ] Push branch and tags:
   - `git push`
   - `git push --tags`
